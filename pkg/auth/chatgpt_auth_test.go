@@ -1,4 +1,4 @@
-package pkg
+package auth
 
 import (
 	"os"
@@ -15,4 +15,14 @@ func TestNewAuthenticator(t *testing.T) {
 
 	auth := NewAuthenticator(email, password, "")
 	assert.NotNil(t, auth)
+
+	err := auth.Begin()
+	assert.NoError(t, err)
+
+	sessionToken := auth.GetSessionToken()
+	assert.NotEmpty(t, sessionToken)
+
+	accessToken, err := auth.GetAccessToken()
+	assert.NoError(t, err)
+	assert.NotEmpty(t, accessToken)
 }

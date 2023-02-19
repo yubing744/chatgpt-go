@@ -1,4 +1,4 @@
-package pkg
+package auth
 
 import (
 	"encoding/json"
@@ -7,11 +7,11 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/yubing744/chatgpt-go/pkg/httpx"
+	"github.com/yubing744/chatgpt-go/pkg/utils"
 )
 
 // Error represents the base error class
@@ -73,26 +73,32 @@ func (a *Authenticator) Begin() error {
 		"Accept-Encoding": {"gzip, deflate, br"},
 	}
 
-	resp, err := a.session.Get(url, headers)
+	resp, err := a.session.Get(url, headers, true)
 	if err != nil {
 		return errors.Wrapf(err, "error in get %s", url)
 	}
 
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusOK && resp.Header.Get("Content-Type") == "application/json" {
+	if resp.StatusCode == http.StatusOK &&
+		strings.Contains(resp.Header.Get("Content-Type"), "application/json") {
 		var data struct {
 			CsrfToken string `json:"csrfToken"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 			return err
 		}
-		a.partOne(data.CsrfToken)
+
+		err := a.partOne(data.CsrfToken)
+		if err != nil {
+			return errors.Wrap(err, "failed to run part one")
+		}
 	} else {
+		body, _ := ioutil.ReadAll(resp.Body)
 		return &Error{
-			location:   "begin",
+			location:   "Begin",
 			statusCode: resp.StatusCode,
-			details:    "response error",
+			details:    fmt.Sprintf("response error, detail: %s", body),
 		}
 	}
 
@@ -101,7 +107,7 @@ func (a *Authenticator) Begin() error {
 
 func (a *Authenticator) partOne(token string) error {
 	url := "https://explorer.api.openai.com/api/auth/signin/auth0?prompt=login"
-	payload := fmt.Sprintf("callbackUrl=/&csrfToken=%s&json=true", token)
+	payload := fmt.Sprintf("callbackUrl=%s&csrfToken=%s&json=true", "%2F", token)
 
 	headers := http.Header{}
 	headers.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -113,20 +119,22 @@ func (a *Authenticator) partOne(token string) error {
 	headers.Set("Referer", "https://explorer.api.openai.com/auth/login")
 	headers.Set("Accept-Encoding", "gzip, deflate")
 
-	resp, err := a.session.Post(url, headers, []byte(payload))
+	resp, err := a.session.Post(url, headers, []byte(payload), true)
 	if err != nil {
 		return errors.Wrapf(err, "error in get %s", url)
 	}
 
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusOK && strings.Contains(resp.Header.Get("Content-Type"), "application/json") {
+	if resp.StatusCode == http.StatusOK &&
+		strings.Contains(resp.Header.Get("Content-Type"), "application/json") {
 		var data struct {
 			URL string `json:"url"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 			return err
 		}
+
 		if data.URL == "https://explorer.api.openai.com/api/auth/error?error=OAuthSignin" || strings.Contains(data.URL, "error") {
 			return &Error{
 				location:   "partOne",
@@ -134,12 +142,17 @@ func (a *Authenticator) partOne(token string) error {
 				details:    "You have been rate limited. Please try again later.",
 			}
 		}
-		a.partTwo(data.URL)
+
+		err := a.partTwo(data.URL)
+		if err != nil {
+			return errors.Wrap(err, "failed to run part two")
+		}
 	} else {
+		body, _ := ioutil.ReadAll(resp.Body)
 		return &Error{
 			location:   "partOne",
 			statusCode: resp.StatusCode,
-			details:    "response error",
+			details:    fmt.Sprintf("response error, detail: %s", body),
 		}
 	}
 
@@ -156,7 +169,7 @@ func (a *Authenticator) partTwo(url string) error {
 		"Referer":         {"https://explorer.api.openai.com/"},
 	}
 
-	resp, err := a.session.Get(url, headers)
+	resp, err := a.session.Get(url, headers, true)
 	if err != nil {
 		return errors.Wrapf(err, "error in get %s", url)
 	}
@@ -164,19 +177,28 @@ func (a *Authenticator) partTwo(url string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusFound || resp.StatusCode == http.StatusOK {
-		body := make([]byte, 1000000)
-		_, err = resp.Body.Read(body)
-		if err != nil && err != http.ErrBodyReadAfterClose {
-			return err
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return errors.Wrap(err, "error in read body in part three")
 		}
+
 		bodyString := string(body)
+		state, ok := utils.RegexpExtra(bodyString, `state=([a-zA-Z0-9-_]*)`, 1)
+		if !ok {
+			return errors.New("not found state in respone body")
+		}
 
-		state := regexp.MustCompile(`state=(.*)`).FindString(bodyString)
-		state = state[:len(state)-1]
-		a.partThree(state)
-
+		err = a.partThree(state)
+		if err != nil {
+			return errors.Wrap(err, "failed to run part three")
+		}
 	} else {
-		return fmt.Errorf("location=__part_two, status_code=%d, details=%s", resp.StatusCode, resp.Body)
+		body, _ := ioutil.ReadAll(resp.Body)
+		return &Error{
+			location:   "partTwo",
+			statusCode: resp.StatusCode,
+			details:    fmt.Sprintf("response error, detail: %s", body),
+		}
 	}
 
 	return nil
@@ -193,7 +215,7 @@ func (auth *Authenticator) partThree(state string) error {
 		"Referer":         []string{"https://explorer.api.openai.com/"},
 	}
 
-	resp, err := auth.session.Get(url, headers)
+	resp, err := auth.session.Get(url, headers, true)
 	if err != nil {
 		return errors.Wrapf(err, "error in get %s", url)
 	}
@@ -201,10 +223,20 @@ func (auth *Authenticator) partThree(state string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
-		return auth.partFour(state)
+		err := auth.partFour(state)
+		if err != nil {
+			return errors.Wrap(err, "failed to run part four")
+		}
 	} else {
-		return fmt.Errorf("partThree failed: status code %d, details %s", resp.StatusCode, resp.Body)
+		body, _ := ioutil.ReadAll(resp.Body)
+		return &Error{
+			location:   "partThree",
+			statusCode: resp.StatusCode,
+			details:    fmt.Sprintf("response error, detail: %s", body),
+		}
 	}
+
+	return nil
 }
 
 func (a *Authenticator) partFour(state string) error {
@@ -223,7 +255,7 @@ func (a *Authenticator) partFour(state string) error {
 
 	payload := fmt.Sprintf("state=%s&username=%s&js-available=false&webauthn-available=true&is-brave=false&webauthn-platform-available=true&action=default", state, emailURLEncoded)
 
-	resp, err := a.session.Post(url, headers, []byte(payload))
+	resp, err := a.session.Post(url, headers, []byte(payload), true)
 	if err != nil {
 		return errors.Wrapf(err, "error in get %s", url)
 	}
@@ -233,10 +265,15 @@ func (a *Authenticator) partFour(state string) error {
 	if resp.StatusCode == 302 || resp.StatusCode == 200 {
 		err = a.partFive(state)
 		if err != nil {
-			return fmt.Errorf("failed to run part five: %w", err)
+			return errors.Wrap(err, "failed to run part five")
 		}
 	} else {
-		return fmt.Errorf("failed to complete part four: status code=%d, response body=%s", resp.StatusCode, resp.Body)
+		body, _ := ioutil.ReadAll(resp.Body)
+		return &Error{
+			location:   "partFour",
+			statusCode: resp.StatusCode,
+			details:    fmt.Sprintf("response error, detail: %s", body),
+		}
 	}
 
 	return nil
@@ -259,7 +296,7 @@ func (a *Authenticator) partFive(state string) error {
 	passwordURLEncoded := urlEncode(a.password)
 	payload := fmt.Sprintf("state=%s&username=%s&password=%s&action=default", state, emailURLEncoded, passwordURLEncoded)
 
-	resp, err := a.session.Post(url, headers, []byte(payload))
+	resp, err := a.session.Post(url, headers, []byte(payload), false)
 	if err != nil {
 		return errors.Wrapf(err, "error in get %s", url)
 	}
@@ -267,14 +304,32 @@ func (a *Authenticator) partFive(state string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 302 || resp.StatusCode == 200 {
-		body, _ := ioutil.ReadAll(resp.Body)
-		re := regexp.MustCompile("state=(.*)\"")
-		newState := re.FindStringSubmatch(string(body))[1]
-		a.partSix(state, newState)
-		return nil
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return errors.Wrap(err, "error in read body in part five")
+		}
+
+		bodyString := string(body)
+		newState, ok := utils.RegexpExtra(bodyString, `state=([a-zA-Z0-9-_]*)`, 1)
+		if !ok {
+			fmt.Print(bodyString)
+			return errors.New("not found state in respone body of part five")
+		}
+
+		err = a.partSix(state, newState)
+		if err != nil {
+			return errors.Wrap(err, "failed to run part five")
+		}
 	} else {
-		return fmt.Errorf("error in partFive: status code is %d", resp.StatusCode)
+		body, _ := ioutil.ReadAll(resp.Body)
+		return &Error{
+			location:   "partFive",
+			statusCode: resp.StatusCode,
+			details:    fmt.Sprintf("response error, detail: %s", body),
+		}
 	}
+
+	return nil
 }
 
 func (a *Authenticator) partSix(oldState, newState string) error {
@@ -289,7 +344,7 @@ func (a *Authenticator) partSix(oldState, newState string) error {
 		"Referer":         {fmt.Sprintf("https://auth0.openai.com/u/login/password?state=%s", oldState)},
 	}
 
-	resp, err := a.session.Get(url, headers)
+	resp, err := a.session.Get(url, headers, false)
 	if err != nil {
 		return errors.Wrapf(err, "error in get %s", url)
 	}
@@ -300,10 +355,15 @@ func (a *Authenticator) partSix(oldState, newState string) error {
 		// Print redirect url
 		redirectURL := resp.Header.Get("Location")
 		if err = a.partSeven(redirectURL, url); err != nil {
-			return err
+			return errors.Wrap(err, "failed to run part seven")
 		}
 	} else {
-		return fmt.Errorf("__part_six: unexpected response status code %d with response text: %s", resp.StatusCode, resp.Body)
+		body, _ := ioutil.ReadAll(resp.Body)
+		return &Error{
+			location:   "partSix",
+			statusCode: resp.StatusCode,
+			details:    fmt.Sprintf("response error, detail: %s", body),
+		}
 	}
 
 	return nil
@@ -320,7 +380,7 @@ func (a *Authenticator) partSeven(redirectURL string, previousURL string) error 
 		"Referer":         {previousURL},
 	}
 
-	resp, err := a.session.Get(url, headers)
+	resp, err := a.session.Get(url, headers, false)
 	if err != nil {
 		return errors.Wrapf(err, "error in get %s", url)
 	}
@@ -333,30 +393,39 @@ func (a *Authenticator) partSeven(redirectURL string, previousURL string) error 
 
 		if ok {
 			a.sessionToken = sessionToken
-			_, err = a.getAccessToken()
+			_, err = a.GetAccessToken()
 			if err != nil {
 				return err
 			}
 		}
-
 	} else {
-		return fmt.Errorf("__part_seven: status code %d, details %s", resp.StatusCode, resp.Body)
+		body, _ := ioutil.ReadAll(resp.Body)
+		return &Error{
+			location:   "partSeven",
+			statusCode: resp.StatusCode,
+			details:    fmt.Sprintf("response error, detail: %s", body),
+		}
 	}
 
 	return nil
 }
 
-func (a *Authenticator) getAccessToken() (string, error) {
+func (a *Authenticator) GetSessionToken() string {
+	return a.sessionToken
+}
+
+func (a *Authenticator) GetAccessToken() (string, error) {
 	a.session.Cookies("openai.com").Set(
 		"__Secure-next-auth.session-token",
 		a.sessionToken,
 	)
 
-	resp, err := a.session.Get("https://explorer.api.openai.com/api/auth/session", nil)
+	resp, err := a.session.Get("https://explorer.api.openai.com/api/auth/session", nil, true)
 	if err != nil {
 		return "", err
 	}
-	if resp.StatusCode == 200 {
+	if resp.StatusCode == 200 &&
+		strings.Contains(resp.Header.Get("Content-Type"), "application/json") {
 		var data struct {
 			AccessToken string `json:"accessToken"`
 		}
@@ -367,10 +436,10 @@ func (a *Authenticator) getAccessToken() (string, error) {
 		return a.accessToken, nil
 	} else {
 		body, _ := ioutil.ReadAll(resp.Body)
-		return "", fmt.Errorf(
-			"location=getAccessToken status_code=%d details=%s",
-			resp.StatusCode,
-			body,
-		)
+		return "", &Error{
+			location:   "GetAccessToken",
+			statusCode: resp.StatusCode,
+			details:    fmt.Sprintf("response error, detail: %s", body),
+		}
 	}
 }

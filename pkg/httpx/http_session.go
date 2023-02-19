@@ -12,7 +12,8 @@ import (
 
 // HttpSession 封装了 http.Client，实现了会话保持和 headers 的传递
 type HttpSession struct {
-	client *http.Client
+	client  *http.Client
+	headers http.Header
 }
 
 // NewHttpSessionClient 返回一个新的 HttpSessionClient 实例
@@ -35,14 +36,30 @@ func NewHttpSession() (*HttpSession, error) {
 }
 
 // Get 发送 GET 请求
-func (httpx *HttpSession) Get(url string, headers http.Header) (*http.Response, error) {
+func (httpx *HttpSession) Get(url string, headers http.Header, allowRedirects bool) (*http.Response, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
 
+	if httpx.headers != nil {
+		for key, value := range httpx.headers {
+			req.Header.Set(key, value[0])
+		}
+	}
+
 	for key, value := range headers {
 		req.Header.Set(key, value[0])
+	}
+
+	if !allowRedirects {
+		httpx.client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		}
+
+		defer func() {
+			httpx.client.CheckRedirect = nil
+		}()
 	}
 
 	resp, err := httpx.client.Do(req)
@@ -54,14 +71,30 @@ func (httpx *HttpSession) Get(url string, headers http.Header) (*http.Response, 
 }
 
 // Post 发送 POST 请求
-func (httpx *HttpSession) Post(url string, headers http.Header, data []byte) (*http.Response, error) {
+func (httpx *HttpSession) Post(url string, headers http.Header, data []byte, allowRedirects bool) (*http.Response, error) {
 	req, err := http.NewRequest("POST", url, bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
 
+	if httpx.headers != nil {
+		for key, value := range httpx.headers {
+			req.Header.Set(key, value[0])
+		}
+	}
+
 	for key, value := range headers {
 		req.Header.Set(key, value[0])
+	}
+
+	if !allowRedirects {
+		httpx.client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		}
+
+		defer func() {
+			httpx.client.CheckRedirect = nil
+		}()
 	}
 
 	resp, err := httpx.client.Do(req)
@@ -86,4 +119,8 @@ func (httpx *HttpSession) Cookies(host string) Coookies {
 	}
 
 	return nil
+}
+
+func (httpx *HttpSession) SetHeaders(headers http.Header) {
+	httpx.headers = headers
 }

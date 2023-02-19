@@ -11,7 +11,7 @@ func TestCookiesGet(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 
-	resp, err := client.Get("https://www.bing.com/", nil)
+	resp, err := client.Get("https://www.bing.com/", nil, true)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -32,7 +32,7 @@ func TestCookiesSet(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 
-	resp, err := client.Get("https://www.bing.com/", nil)
+	resp, err := client.Get("https://www.bing.com/", nil, true)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
