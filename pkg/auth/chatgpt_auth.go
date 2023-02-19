@@ -91,7 +91,7 @@ func (a *Authenticator) Begin() error {
 
 		err := a.partOne(data.CsrfToken)
 		if err != nil {
-			return errors.Wrap(err, "failed to run part one")
+			return err
 		}
 	} else {
 		body, _ := ioutil.ReadAll(resp.Body)
@@ -145,7 +145,7 @@ func (a *Authenticator) partOne(token string) error {
 
 		err := a.partTwo(data.URL)
 		if err != nil {
-			return errors.Wrap(err, "failed to run part two")
+			return err
 		}
 	} else {
 		body, _ := ioutil.ReadAll(resp.Body)
@@ -190,7 +190,7 @@ func (a *Authenticator) partTwo(url string) error {
 
 		err = a.partThree(state)
 		if err != nil {
-			return errors.Wrap(err, "failed to run part three")
+			return err
 		}
 	} else {
 		body, _ := ioutil.ReadAll(resp.Body)
@@ -225,7 +225,7 @@ func (auth *Authenticator) partThree(state string) error {
 	if resp.StatusCode == http.StatusOK {
 		err := auth.partFour(state)
 		if err != nil {
-			return errors.Wrap(err, "failed to run part four")
+			return err
 		}
 	} else {
 		body, _ := ioutil.ReadAll(resp.Body)
@@ -265,7 +265,7 @@ func (a *Authenticator) partFour(state string) error {
 	if resp.StatusCode == 302 || resp.StatusCode == 200 {
 		err = a.partFive(state)
 		if err != nil {
-			return errors.Wrap(err, "failed to run part five")
+			return err
 		}
 	} else {
 		body, _ := ioutil.ReadAll(resp.Body)
@@ -318,7 +318,7 @@ func (a *Authenticator) partFive(state string) error {
 
 		err = a.partSix(state, newState)
 		if err != nil {
-			return errors.Wrap(err, "failed to run part five")
+			return err
 		}
 	} else {
 		body, _ := ioutil.ReadAll(resp.Body)
@@ -355,7 +355,7 @@ func (a *Authenticator) partSix(oldState, newState string) error {
 		// Print redirect url
 		redirectURL := resp.Header.Get("Location")
 		if err = a.partSeven(redirectURL, url); err != nil {
-			return errors.Wrap(err, "failed to run part seven")
+			return err
 		}
 	} else {
 		body, _ := ioutil.ReadAll(resp.Body)

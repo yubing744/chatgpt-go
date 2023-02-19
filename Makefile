@@ -12,5 +12,5 @@ build: clean
 test: deps
 	godotenv -f .env.local go test ./...
 
-run: build
+run:
 	godotenv -f .env.local go run ./cmd/cmd.go

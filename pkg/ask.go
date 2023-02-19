@@ -65,54 +65,60 @@ func (client *ChatgptClient) Ask(ctx context.Context, prompt string, conversatio
 
 	defer resp.Body.Close()
 
-	body, _ := ioutil.ReadAll(resp.Body)
-
 	if resp.StatusCode == http.StatusOK {
-		if strings.HasPrefix(string(body), "data:") {
-			result := AskResult{
-				Code:   0,
-				Detail: "",
-			}
-
-			result.Data = parseResponse(resp)
-
-			return &result, nil
-		} else {
-			result := AskResult{
-				Code: 1,
-				Data: nil,
-			}
-
-			err := json.Unmarshal(body, &result)
-			if err != nil {
-				return nil, errors.Wrap(err, "Error in Unmarshal body")
-			}
-
-			return &result, nil
+		result := &AskResult{
+			Code:   0,
+			Detail: "",
 		}
+
+		msgs, err := parseResponse(resp)
+		if err != nil {
+			result.Code = 1
+			result.Detail = err.Error()
+			return result, nil
+		}
+
+		result.Data = msgs
+		return result, nil
 	}
 
-	return nil, errors.New(string(body))
+	body, _ := ioutil.ReadAll(resp.Body)
+	return nil, errors.Errorf("Error in ask: %s", string(body))
 }
 
-func parseResponse(response *http.Response) []*Message {
+func parseResponse(response *http.Response) ([]*Message, error) {
 	messages := make([]*Message, 0)
 
 	scanner := bufio.NewScanner(response.Body)
 	for scanner.Scan() {
-		line := scanner.Text()[2 : len(scanner.Text())-1]
+		line := scanner.Text()
+		fmt.Printf("raw line: %s\n", line)
+
 		if line == "" {
 			continue
 		}
-		if strings.Contains(line, "data: ") {
-			line = line[6:]
+
+		if !strings.HasPrefix(line, "data: ") {
+			var data struct {
+				Detail string `json:"detail"`
+			}
+			err := json.Unmarshal([]byte(line), &data)
+			if err != nil {
+				return nil, err
+			}
+
+			return nil, errors.New(data.Detail)
 		}
+
+		line = strings.TrimPrefix(line, "data: ")
 		if line == "[DONE]" {
 			break
 		}
+
 		line = strings.ReplaceAll(line, `\"`, `"`)
 		line = strings.ReplaceAll(line, `\'`, `'`)
 		line = strings.ReplaceAll(line, `\\`, `\`)
+
 		var parsedLine map[string]interface{}
 		err := json.Unmarshal([]byte(line), &parsedLine)
 		if err != nil {
@@ -123,25 +129,32 @@ func parseResponse(response *http.Response) []*Message {
 			fmt.Println(parsedLine)
 			continue
 		}
-		message := parsedLine["message"].(map[string]interface{})["content"].(map[string]interface{})["parts"].([]interface{})[0]
-		conversationID := parsedLine["conversation_id"].(string)
-		parentID := parsedLine["message"].(map[string]interface{})["id"].(string)
-		messages = append(messages, &Message{
-			ConversationID: conversationID,
-			ParentID:       parentID,
-			Text:           fmt.Sprintf("%v", message),
-		})
+
+		messageContextType := parsedLine["message"].(map[string]interface{})["content"].(map[string]interface{})["content_type"].(string)
+		if messageContextType == "test" {
+			message := parsedLine["message"].(map[string]interface{})["content"].(map[string]interface{})["parts"].([]interface{})[0]
+			conversationID := parsedLine["conversation_id"].(string)
+			parentID := parsedLine["message"].(map[string]interface{})["id"].(string)
+			messages = append(messages, &Message{
+				ConversationID: conversationID,
+				ParentID:       parentID,
+				Text:           fmt.Sprintf("%v", message),
+			})
+		} else {
+			fmt.Printf("not support message type: %s", messageContextType)
+		}
 	}
 
-	return messages
+	return messages, nil
 }
 
 func checkFields(parsedLine map[string]interface{}) bool {
 	_, messageExists := parsedLine["message"]
 	_, conversationIDExists := parsedLine["conversation_id"]
 	_, messageContentExists := parsedLine["message"].(map[string]interface{})["content"]
+	_, messageContentTypeExists := parsedLine["message"].(map[string]interface{})["content"].(map[string]interface{})["content_type"]
 	_, messagePartsExists := parsedLine["message"].(map[string]interface{})["content"].(map[string]interface{})["parts"]
-	if messageExists && conversationIDExists && messageContentExists && messagePartsExists {
+	if messageExists && conversationIDExists && messageContentExists && messageContentTypeExists && messagePartsExists {
 		return true
 	}
 	return false

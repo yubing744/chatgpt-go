@@ -27,7 +27,7 @@ func NewHttpSession() (*HttpSession, error) {
 		return nil, err
 	}
 	httpClient := &http.Client{
-		Timeout: time.Second * 10,
+		Timeout: time.Second * 20,
 		Jar:     cookieJar,
 	}
 	return &HttpSession{
