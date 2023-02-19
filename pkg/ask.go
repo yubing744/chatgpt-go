@@ -23,7 +23,7 @@ type Message struct {
 type AskResult struct {
 	Code   int
 	Detail string `json:"detail"`
-	Data   []*Message
+	Data   *Message
 }
 
 func (client *ChatgptClient) Ask(ctx context.Context, prompt string, conversationId *string, parentId *string, timeout time.Duration) (*AskResult, error) {
@@ -78,7 +78,10 @@ func (client *ChatgptClient) Ask(ctx context.Context, prompt string, conversatio
 			return result, nil
 		}
 
-		result.Data = msgs
+		if len(msgs) > 0 {
+			result.Data = msgs[len(msgs)-1]
+		}
+
 		return result, nil
 	}
 

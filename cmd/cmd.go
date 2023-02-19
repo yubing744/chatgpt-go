@@ -48,8 +48,8 @@ func main() {
 		return
 	}
 
-	for _, msg := range result.Data {
-		fmt.Printf("AI: %s\n", msg.Text)
+	if result.Code == 0 {
+		fmt.Printf("AI: %s\n", result.Data.Text)
 	}
 
 	fmt.Print("Done\n")
