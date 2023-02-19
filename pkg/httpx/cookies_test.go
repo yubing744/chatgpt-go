@@ -1,0 +1,52 @@
+package httpx
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestCookiesGet(t *testing.T) {
+	client, err := NewHttpSession()
+	assert.NoError(t, err)
+	assert.NotNil(t, client)
+
+	resp, err := client.Get("https://www.bing.com/", nil)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+
+	assert.NoError(t, err)
+	assert.NotEmpty(t, resp)
+
+	cookies := client.Cookies("bing.com")
+	assert.NotNil(t, cookies)
+
+	val, ok := cookies.Get("SUID")
+	assert.True(t, ok)
+	assert.NotEmpty(t, val)
+}
+
+func TestCookiesSet(t *testing.T) {
+	client, err := NewHttpSession()
+	assert.NoError(t, err)
+	assert.NotNil(t, client)
+
+	resp, err := client.Get("https://www.bing.com/", nil)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+
+	assert.NoError(t, err)
+	assert.NotEmpty(t, resp)
+
+	cookies := client.Cookies("bing.com")
+	assert.NotNil(t, cookies)
+
+	ok := cookies.Set("SUID", "xxxx")
+	assert.True(t, ok)
+
+	val, ok := cookies.Get("SUID")
+	assert.True(t, ok)
+	assert.Equal(t, "xxxx", val)
+}
