@@ -95,7 +95,6 @@ func parseResponse(response *http.Response) ([]*Message, error) {
 	scanner := bufio.NewScanner(response.Body)
 	for scanner.Scan() {
 		line := scanner.Text()
-		fmt.Printf("raw line: %s\n", line)
 
 		if line == "" {
 			continue
@@ -134,7 +133,7 @@ func parseResponse(response *http.Response) ([]*Message, error) {
 		}
 
 		messageContextType := parsedLine["message"].(map[string]interface{})["content"].(map[string]interface{})["content_type"].(string)
-		if messageContextType == "test" {
+		if messageContextType == "text" {
 			message := parsedLine["message"].(map[string]interface{})["content"].(map[string]interface{})["parts"].([]interface{})[0]
 			conversationID := parsedLine["conversation_id"].(string)
 			parentID := parsedLine["message"].(map[string]interface{})["id"].(string)
@@ -144,7 +143,7 @@ func parseResponse(response *http.Response) ([]*Message, error) {
 				Text:           fmt.Sprintf("%v", message),
 			})
 		} else {
-			fmt.Printf("not support message type: %s", messageContextType)
+			fmt.Printf("not support message type: %s\n", messageContextType)
 		}
 	}
 
