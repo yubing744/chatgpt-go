@@ -71,7 +71,7 @@ func (client *ChatgptClient) Ask(ctx context.Context, prompt string, conversatio
 			Detail: "",
 		}
 
-		msgs, err := parseResponse(resp)
+		msgs, err := client.parseResponse(resp)
 		if err != nil {
 			result.Code = 1
 			result.Detail = err.Error()
@@ -89,14 +89,22 @@ func (client *ChatgptClient) Ask(ctx context.Context, prompt string, conversatio
 	return nil, errors.Errorf("Error in ask: %s", string(body))
 }
 
-func parseResponse(response *http.Response) ([]*Message, error) {
+func (client *ChatgptClient) parseResponse(response *http.Response) ([]*Message, error) {
 	messages := make([]*Message, 0)
 
 	scanner := bufio.NewScanner(response.Body)
 	for scanner.Scan() {
 		line := scanner.Text()
 
+		if client.debug {
+			fmt.Printf("new line: %s\n", line)
+		}
+
 		if line == "" {
+			continue
+		}
+
+		if strings.HasPrefix(line, "event:") {
 			continue
 		}
 
@@ -159,5 +167,6 @@ func checkFields(parsedLine map[string]interface{}) bool {
 	if messageExists && conversationIDExists && messageContentExists && messageContentTypeExists && messagePartsExists {
 		return true
 	}
+
 	return false
 }

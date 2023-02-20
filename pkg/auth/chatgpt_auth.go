@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/yubing744/chatgpt-go/pkg/httpx"
@@ -45,7 +46,7 @@ func NewAuthenticator(emailAddress, password, proxy string) *Authenticator {
 		userAgent:    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
 	}
 
-	session, err := httpx.NewHttpSession()
+	session, err := httpx.NewHttpSession(time.Second * 60)
 	if err != nil {
 		log.Fatal("init http session fail")
 	}

@@ -15,14 +15,16 @@ type ChatgptClient struct {
 	baseURL string
 	session *httpx.HttpSession
 	auth    *auth.Authenticator
+	debug   bool
 }
 
 func NewChatgptClient(cfg *config.Config) *ChatgptClient {
 	client := &ChatgptClient{
 		baseURL: "https://chatgpt.duti.tech",
+		debug:   cfg.Debug,
 	}
 
-	session, err := httpx.NewHttpSession()
+	session, err := httpx.NewHttpSession(cfg.Timeout)
 	if err != nil {
 		log.Fatal("init http session fatal")
 	}

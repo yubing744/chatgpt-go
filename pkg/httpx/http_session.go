@@ -17,7 +17,7 @@ type HttpSession struct {
 }
 
 // NewHttpSessionClient 返回一个新的 HttpSessionClient 实例
-func NewHttpSession() (*HttpSession, error) {
+func NewHttpSession(timeout time.Duration) (*HttpSession, error) {
 	opts := &cookiejar.Options{
 		PublicSuffixList: publicsuffix.List,
 	}
@@ -27,7 +27,7 @@ func NewHttpSession() (*HttpSession, error) {
 		return nil, err
 	}
 	httpClient := &http.Client{
-		Timeout: time.Second * 20,
+		Timeout: timeout,
 		Jar:     cookieJar,
 	}
 	return &HttpSession{

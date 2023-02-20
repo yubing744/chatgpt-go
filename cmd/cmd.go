@@ -28,6 +28,8 @@ func main() {
 		Email:    email,
 		Password: password,
 		Proxy:    "",
+		Timeout:  time.Second * 300,
+		Debug:    true,
 	}
 	client := pkg.NewChatgptClient(cfg)
 
@@ -40,7 +42,7 @@ func main() {
 
 	fmt.Print("Login success\n")
 
-	prompt := "Hello"
+	prompt := "openAI API 接口 模型温度如何设置？"
 	fmt.Printf("You: %s", prompt)
 	result, err := client.Ask(context.Background(), prompt, nil, nil, time.Second*5)
 	if err != nil {

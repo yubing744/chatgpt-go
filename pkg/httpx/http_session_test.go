@@ -2,18 +2,19 @@ package httpx
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestHttpSession(t *testing.T) {
-	client, err := NewHttpSession()
+	client, err := NewHttpSession(time.Second * 5)
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 }
 
 func TestHTTPXGet(t *testing.T) {
-	client, err := NewHttpSession()
+	client, err := NewHttpSession(time.Second * 5)
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 
@@ -27,7 +28,7 @@ func TestHTTPXGet(t *testing.T) {
 }
 
 func TestHTTPXGetCookies(t *testing.T) {
-	client, err := NewHttpSession()
+	client, err := NewHttpSession(time.Second * 5)
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 
