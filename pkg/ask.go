@@ -92,9 +92,14 @@ func (client *ChatgptClient) Ask(ctx context.Context, prompt string, conversatio
 func (client *ChatgptClient) parseResponse(response *http.Response) ([]*Message, error) {
 	messages := make([]*Message, 0)
 
+	fmt.Print("\n")
+	fmt.Print("Parse response ")
+
 	scanner := bufio.NewScanner(response.Body)
 	for scanner.Scan() {
 		line := scanner.Text()
+
+		fmt.Print(".")
 
 		if client.debug {
 			fmt.Printf("new line: %s\n", line)
@@ -154,6 +159,8 @@ func (client *ChatgptClient) parseResponse(response *http.Response) ([]*Message,
 			fmt.Printf("not support message type: %s\n", messageContextType)
 		}
 	}
+
+	fmt.Print("\n")
 
 	return messages, nil
 }

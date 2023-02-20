@@ -29,7 +29,7 @@ func main() {
 		Password: password,
 		Proxy:    "",
 		Timeout:  time.Second * 300,
-		Debug:    true,
+		Debug:    false,
 	}
 	client := pkg.NewChatgptClient(cfg)
 
