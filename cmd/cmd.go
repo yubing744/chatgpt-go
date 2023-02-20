@@ -34,7 +34,7 @@ func main() {
 	client := pkg.NewChatgptClient(cfg)
 
 	fmt.Print("Login ...\n")
-	err := client.Login()
+	err := client.Login(context.Background())
 	if err != nil {
 		log.Fatalf("Login fail: %s\n", err.Error())
 		return

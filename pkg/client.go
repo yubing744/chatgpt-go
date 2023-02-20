@@ -1,9 +1,11 @@
 package pkg
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/yubing744/chatgpt-go/pkg/auth"
@@ -35,7 +37,7 @@ func NewChatgptClient(cfg *config.Config) *ChatgptClient {
 	return client
 }
 
-func (client *ChatgptClient) Login() error {
+func (client *ChatgptClient) Login(ctx context.Context) error {
 	err := client.auth.Begin()
 	if err != nil {
 		return errors.Wrap(err, "Error in auth")
@@ -43,10 +45,30 @@ func (client *ChatgptClient) Login() error {
 
 	client.refreshToken()
 
+	ticker := time.NewTicker(10 * time.Minute) // 每 10 分钟刷新一次 token
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				// 执行刷新 token 的逻辑
+				err := client.refreshToken()
+				if err != nil {
+					fmt.Printf("fresh token error: %s\n", err.Error())
+					continue
+				}
+			}
+		}
+	}()
+
 	return nil
 }
 
 func (client *ChatgptClient) refreshToken() error {
+	fmt.Printf("fresh token ...\n")
+
 	accessToken, err := client.auth.GetAccessToken()
 	if err != nil {
 		return errors.Wrap(err, "Error in get access token")
@@ -61,6 +83,8 @@ func (client *ChatgptClient) refreshToken() error {
 		"Accept-Language":           {"en-US,en;q=0.9"},
 		"Referer":                   {"https://chat.openai.com/chat"},
 	})
+
+	fmt.Printf("fresh token ok!\n")
 
 	return nil
 }

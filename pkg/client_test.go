@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -42,6 +43,6 @@ func TestChatgptClientLogin(t *testing.T) {
 	client := NewChatgptClient(cfg)
 	assert.NotNil(t, client)
 
-	err := client.Login()
+	err := client.Login(context.Background())
 	assert.NoError(t, err)
 }
