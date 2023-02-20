@@ -114,6 +114,8 @@ func (client *ChatgptClient) parseResponse(response *http.Response) ([]*Message,
 		}
 
 		if !strings.HasPrefix(line, "data: ") {
+			fmt.Printf("line: %s\n", line)
+
 			var data struct {
 				Detail string `json:"detail"`
 			}
