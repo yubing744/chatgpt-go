@@ -2,6 +2,7 @@ package httpx
 
 import (
 	"bytes"
+	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -29,6 +30,15 @@ func NewHttpSession(timeout time.Duration) (*HttpSession, error) {
 	httpClient := &http.Client{
 		Timeout: timeout,
 		Jar:     cookieJar,
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			Dial: (&net.Dialer{
+				Timeout:   20 * time.Second,
+				Deadline:  time.Now().Add(60 * time.Second),
+				KeepAlive: 5 * time.Second,
+			}).Dial,
+			TLSHandshakeTimeout: 20 * time.Second,
+		},
 	}
 	return &HttpSession{
 		client: httpClient,

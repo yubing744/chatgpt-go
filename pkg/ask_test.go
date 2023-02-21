@@ -73,3 +73,19 @@ func TestParseResponseForInternalServerError(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, "Internal Server Error", err.Error())
 }
+
+func TestParseResponseForLongMessagesShouldBeOk(t *testing.T) {
+	client := NewChatgptClient("test", "test")
+
+	body := `data: {"message": {"id": "d4cb6686-6ef7-46da-87d7-df16abbec928", "role": "assistant", "user": null, "create_time": null, "update_time": null, "content": {"content_type": "text", "parts": ["The term \"911\" is commonly associated with the emergency telephone number in the United States and Canada. When someone dials 911, it connects them with emergency services such as police, fire, or medical"]}, "end_turn": null, "weight": 1.0, "metadata": {"message_type": "next", "model_slug": "text-davinci-002-render-sha"}, "recipient": "all"}, "conversation_id": "45e1a523-c85a-4d11-96c5-b91e38f0ee83", "error": null}` + "\n"
+	body = body + "data: [DONE]"
+
+	resp := &http.Response{
+		Body: ioutil.NopCloser(bytes.NewReader([]byte(body))),
+	}
+
+	msgs, err := client.parseResponse(resp)
+	assert.NoError(t, err)
+	assert.Len(t, msgs, 1)
+	assert.Equal(t, `The term "911" is commonly associated with the emergency telephone number in the United States and Canada. When someone dials 911, it connects them with emergency services such as police, fire, or medical`, msgs[0].Text)
+}
