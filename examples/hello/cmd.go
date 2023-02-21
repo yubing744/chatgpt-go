@@ -33,16 +33,18 @@ func main() {
 	}
 	client := pkg.NewChatgptClient(cfg)
 
-	fmt.Print("Login ...\n")
-	err := client.Login(context.Background())
+	fmt.Print("Starting ...\n")
+	err := client.Start(context.Background())
+	defer client.Stop()
+
 	if err != nil {
-		log.Fatalf("Login fail: %s\n", err.Error())
+		log.Fatalf("Start fail: %s\n", err.Error())
 		return
 	}
 
-	fmt.Print("Login success\n")
+	fmt.Print("Start success\n")
 
-	prompt := "openAI API 接口 模型温度如何设置？"
+	prompt := "Hello"
 	fmt.Printf("You: %s", prompt)
 	result, err := client.Ask(context.Background(), prompt, nil, nil, time.Second*5)
 	if err != nil {

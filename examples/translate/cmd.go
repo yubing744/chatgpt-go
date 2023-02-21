@@ -1,21 +1,3 @@
-# chatgpt-go
-chatGPT golang client translated from https://github.com/acheong08/ChatGPT
-
-## Installation
-
-```shell script
-go get github.com/yubing744/chatgpt-go
-```
-
-## Usage
-
-Config .env.local file
-```
-CHATGPT_EMAIL="your chat gpt account"
-CHATGPT_PASSWORD="your chat gpt password"
-```
-
-``` go
 package main
 
 import (
@@ -54,7 +36,6 @@ func main() {
 	fmt.Print("Starting ...\n")
 	err := client.Start(context.Background())
 	defer client.Stop()
-
 	if err != nil {
 		log.Fatalf("Start fail: %s\n", err.Error())
 		return
@@ -62,7 +43,7 @@ func main() {
 
 	fmt.Print("Start success\n")
 
-	prompt := "Hello"
+	prompt := "翻译成英文：你还需要哪些指标帮助决策交易命令？"
 	fmt.Printf("You: %s", prompt)
 	result, err := client.Ask(context.Background(), prompt, nil, nil, time.Second*5)
 	if err != nil {
@@ -76,4 +57,3 @@ func main() {
 
 	fmt.Print("Done\n")
 }
-```

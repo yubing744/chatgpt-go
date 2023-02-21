@@ -73,9 +73,7 @@ func (client *ChatgptClient) Ask(ctx context.Context, prompt string, conversatio
 
 		msgs, err := client.parseResponse(resp)
 		if err != nil {
-			result.Code = 1
-			result.Detail = err.Error()
-			return result, nil
+			return nil, err
 		}
 
 		if len(msgs) > 0 {
@@ -109,12 +107,16 @@ func (client *ChatgptClient) parseResponse(response *http.Response) ([]*Message,
 			continue
 		}
 
-		if strings.HasPrefix(line, "event:") {
+		if strings.HasPrefix(line, "event: ") {
 			continue
 		}
 
 		if !strings.HasPrefix(line, "data: ") {
 			fmt.Printf("line: %s\n", line)
+
+			line = strings.ReplaceAll(line, `\"`, `"`)
+			line = strings.ReplaceAll(line, `\'`, `'`)
+			line = strings.ReplaceAll(line, `\\`, `\`)
 
 			var data struct {
 				Detail string `json:"detail"`
@@ -139,8 +141,10 @@ func (client *ChatgptClient) parseResponse(response *http.Response) ([]*Message,
 		var parsedLine map[string]interface{}
 		err := json.Unmarshal([]byte(line), &parsedLine)
 		if err != nil {
+			fmt.Printf("Error in Unmarshal: %s", line)
 			continue
 		}
+
 		if !checkFields(parsedLine) {
 			fmt.Println("Field missing")
 			fmt.Println(parsedLine)

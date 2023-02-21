@@ -43,6 +43,8 @@ func TestChatgptClientLogin(t *testing.T) {
 	client := NewChatgptClient(cfg)
 	assert.NotNil(t, client)
 
-	err := client.Login(context.Background())
+	err := client.Start(context.Background())
+	defer client.Stop()
+
 	assert.NoError(t, err)
 }

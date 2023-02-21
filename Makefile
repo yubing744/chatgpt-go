@@ -8,11 +8,8 @@ deps:
 clean:
 	rm -rf bin/*
 
-build: clean
-	go build -o ./bin/${NAME} ./cmd/cmd.go
-
 test: deps
 	godotenv -f .env.local go test ./...
 
-run: deps
-	godotenv -f .env.local go run ./cmd/cmd.go
+run-%: deps
+	godotenv -f .env.local go run ./examples/$*/cmd.go

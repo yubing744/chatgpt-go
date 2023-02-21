@@ -18,6 +18,7 @@ type ChatgptClient struct {
 	session *httpx.HttpSession
 	auth    *auth.Authenticator
 	debug   bool
+	cancel  context.CancelFunc
 }
 
 func NewChatgptClient(cfg *config.Config) *ChatgptClient {
@@ -37,13 +38,18 @@ func NewChatgptClient(cfg *config.Config) *ChatgptClient {
 	return client
 }
 
-func (client *ChatgptClient) Login(ctx context.Context) error {
+func (client *ChatgptClient) Start(ctx context.Context) error {
+	ctx, client.cancel = context.WithCancel(ctx)
+
 	err := client.auth.Begin()
 	if err != nil {
 		return errors.Wrap(err, "Error in auth")
 	}
 
-	client.refreshToken()
+	err = client.refreshToken()
+	if err != nil {
+		return err
+	}
 
 	ticker := time.NewTicker(10 * time.Minute) // 每 10 分钟刷新一次 token
 
@@ -51,6 +57,8 @@ func (client *ChatgptClient) Login(ctx context.Context) error {
 		for {
 			select {
 			case <-ctx.Done():
+				fmt.Printf("stop ticker ...\n")
+				ticker.Stop()
 				return
 			case <-ticker.C:
 				// 执行刷新 token 的逻辑
@@ -64,6 +72,12 @@ func (client *ChatgptClient) Login(ctx context.Context) error {
 	}()
 
 	return nil
+}
+
+func (client *ChatgptClient) Stop() {
+	if client.cancel != nil {
+		client.cancel()
+	}
 }
 
 func (client *ChatgptClient) refreshToken() error {
