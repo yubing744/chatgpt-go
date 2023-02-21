@@ -9,31 +9,41 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/yubing744/chatgpt-go/pkg/auth"
-	"github.com/yubing744/chatgpt-go/pkg/config"
 	"github.com/yubing744/chatgpt-go/pkg/httpx"
 )
 
 type ChatgptClient struct {
-	baseURL string
 	session *httpx.HttpSession
 	auth    *auth.Authenticator
-	debug   bool
 	cancel  context.CancelFunc
+	baseURL string
+	debug   bool
 }
 
-func NewChatgptClient(cfg *config.Config) *ChatgptClient {
-	client := &ChatgptClient{
+func NewChatgptClient(email string, password string, opts ...Option) *ChatgptClient {
+	cfg := &Options{
 		baseURL: "https://chatgpt.duti.tech",
-		debug:   cfg.Debug,
+		timeout: time.Second * 300,
+		proxy:   "",
+		debug:   false,
 	}
 
-	session, err := httpx.NewHttpSession(cfg.Timeout)
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	client := &ChatgptClient{
+		baseURL: cfg.baseURL,
+		debug:   cfg.debug,
+	}
+
+	session, err := httpx.NewHttpSession(cfg.timeout)
 	if err != nil {
 		log.Fatal("init http session fatal")
 	}
 
 	client.session = session
-	client.auth = auth.NewAuthenticator(cfg.Email, cfg.Password, cfg.Proxy)
+	client.auth = auth.NewAuthenticator(email, password, cfg.proxy)
 
 	return client
 }
