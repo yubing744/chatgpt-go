@@ -88,19 +88,21 @@ func (client *ChatgptClient) Ask(ctx context.Context, prompt string, conversatio
 }
 
 func (client *ChatgptClient) parseResponse(response *http.Response) ([]*Message, error) {
+	log := client.logger
+
 	messages := make([]*Message, 0)
 
-	fmt.Print("\n")
-	fmt.Print("Parse response ")
+	log.Printf("\n")
+	log.Printf("Parse response ")
 
 	scanner := bufio.NewScanner(response.Body)
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		fmt.Print(".")
+		log.Printf(".")
 
 		if client.debug {
-			fmt.Printf("new line: %s\n", line)
+			log.Printf("new line: %s\n", line)
 		}
 
 		if line == "" {
@@ -112,7 +114,7 @@ func (client *ChatgptClient) parseResponse(response *http.Response) ([]*Message,
 		}
 
 		if !strings.HasPrefix(line, "data: ") {
-			fmt.Printf("line: %s\n", line)
+			log.Printf("line: %s\n", line)
 
 			line = strings.ReplaceAll(line, `\"`, `"`)
 			line = strings.ReplaceAll(line, `\'`, `'`)
@@ -141,13 +143,13 @@ func (client *ChatgptClient) parseResponse(response *http.Response) ([]*Message,
 		var parsedLine map[string]interface{}
 		err := json.Unmarshal([]byte(line), &parsedLine)
 		if err != nil {
-			fmt.Printf("Error in Unmarshal: %s\n", line)
+			log.Printf("Error in Unmarshal: %s\n", line)
 			continue
 		}
 
 		if !checkFields(parsedLine) {
-			fmt.Println("Field missing")
-			fmt.Println(parsedLine)
+			log.Printf("Field missing\n")
+			log.Printf("%v", parsedLine)
 			continue
 		}
 
@@ -162,11 +164,11 @@ func (client *ChatgptClient) parseResponse(response *http.Response) ([]*Message,
 				Text:           fmt.Sprintf("%v", message),
 			})
 		} else {
-			fmt.Printf("not support message type: %s\n", messageContextType)
+			log.Printf("not support message type: %s\n", messageContextType)
 		}
 	}
 
-	fmt.Print("\n")
+	log.Printf("\n")
 
 	return messages, nil
 }

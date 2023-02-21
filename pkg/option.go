@@ -7,13 +7,14 @@ type Options struct {
 	proxy   string
 	timeout time.Duration
 	debug   bool
+	logger  Logger
 }
 
 type Option func(opts *Options)
 
-func WithOptions(opt *Options) Option {
+func WithOptions(options Options) Option {
 	return func(opts *Options) {
-		*opts = *opt
+		*opts = options
 	}
 }
 
@@ -38,5 +39,11 @@ func WithTimeout(timeout time.Duration) Option {
 func WithDebug(debug bool) Option {
 	return func(opts *Options) {
 		opts.debug = debug
+	}
+}
+
+func WithLogger(logger Logger) Option {
+	return func(opts *Options) {
+		opts.logger = logger
 	}
 }

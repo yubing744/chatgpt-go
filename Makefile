@@ -5,7 +5,7 @@ NAME="chatgpt"
 deps:
 	go install github.com/joho/godotenv/cmd/godotenv@latest
 
-unit-test: deps
+unit-test:
 	go test ./pkg/...
 
 int-test: deps

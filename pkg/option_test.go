@@ -12,7 +12,7 @@ func TestWithOptions(t *testing.T) {
 		baseURL: "https://chatgpt.duti.tech",
 	}
 
-	opt := WithOptions(&Options{
+	opt := WithOptions(Options{
 		baseURL: "https://chatgpt.duti.tech2",
 	})
 
@@ -67,4 +67,16 @@ func TestWithDebug(t *testing.T) {
 	opt(cfg)
 
 	assert.True(t, cfg.debug)
+}
+
+func TestWithLogger(t *testing.T) {
+	cfg := &Options{
+		logger: nil,
+	}
+
+	opt := WithLogger(&Log{})
+
+	opt(cfg)
+
+	assert.NotNil(t, cfg.logger)
 }

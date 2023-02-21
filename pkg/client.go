@@ -12,9 +12,16 @@ import (
 	"github.com/yubing744/chatgpt-go/pkg/httpx"
 )
 
+// Logger is used for logging formatted messages.
+type Logger interface {
+	// Printf must have the same semantics as log.Printf.
+	Printf(format string, args ...interface{})
+}
+
 type ChatgptClient struct {
 	session *httpx.HttpSession
 	auth    *auth.Authenticator
+	logger  Logger
 	cancel  context.CancelFunc
 	baseURL string
 	debug   bool
@@ -26,6 +33,7 @@ func NewChatgptClient(email string, password string, opts ...Option) *ChatgptCli
 		timeout: time.Second * 300,
 		proxy:   "",
 		debug:   false,
+		logger:  &Log{},
 	}
 
 	for _, opt := range opts {
@@ -35,6 +43,7 @@ func NewChatgptClient(email string, password string, opts ...Option) *ChatgptCli
 	client := &ChatgptClient{
 		baseURL: cfg.baseURL,
 		debug:   cfg.debug,
+		logger:  cfg.logger,
 	}
 
 	session, err := httpx.NewHttpSession(cfg.timeout)
@@ -67,14 +76,14 @@ func (client *ChatgptClient) Start(ctx context.Context) error {
 		for {
 			select {
 			case <-ctx.Done():
-				fmt.Printf("stop ticker ...\n")
+				client.logger.Printf("stop ticker ...\n")
 				ticker.Stop()
 				return
 			case <-ticker.C:
 				// 执行刷新 token 的逻辑
 				err := client.refreshToken()
 				if err != nil {
-					fmt.Printf("fresh token error: %s\n", err.Error())
+					client.logger.Printf("fresh token error: %s\n", err.Error())
 					continue
 				}
 			}
@@ -91,7 +100,7 @@ func (client *ChatgptClient) Stop() {
 }
 
 func (client *ChatgptClient) refreshToken() error {
-	fmt.Printf("fresh token ...\n")
+	client.logger.Printf("fresh token ...\n")
 
 	accessToken, err := client.auth.GetAccessToken()
 	if err != nil {
@@ -108,7 +117,7 @@ func (client *ChatgptClient) refreshToken() error {
 		"Referer":                   {"https://chat.openai.com/chat"},
 	})
 
-	fmt.Printf("fresh token ok!\n")
+	client.logger.Printf("fresh token ok!\n")
 
 	return nil
 }
