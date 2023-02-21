@@ -27,7 +27,6 @@ import (
 
 	"github.com/Valgard/godotenv"
 	"github.com/yubing744/chatgpt-go/pkg"
-	"github.com/yubing744/chatgpt-go/pkg/config"
 )
 
 func main() {
@@ -42,14 +41,7 @@ func main() {
 		log.Panic("CHATGPT_EMAIL or CHATGPT_PASSWORD not set in .env.local")
 	}
 
-	cfg := &config.Config{
-		Email:    email,
-		Password: password,
-		Proxy:    "",
-		Timeout:  time.Second * 300,
-		Debug:    false,
-	}
-	client := pkg.NewChatgptClient(cfg)
+	client := pkg.NewChatgptClient(email, password)
 
 	fmt.Print("Starting ...\n")
 	err := client.Start(context.Background())

@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/yubing744/chatgpt-go/pkg"
@@ -24,7 +23,7 @@ func TestChatgptClientAsk(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	result, err := client.Ask(context.Background(), "Hello", nil, nil, time.Second*5)
+	result, err := client.Ask(context.Background(), "Hello", nil, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 }
@@ -42,7 +41,7 @@ func TestChatgptClientAsk2(t *testing.T) {
 	defer client.Stop()
 	assert.NoError(t, err)
 
-	result, err := client.Ask(context.Background(), "openAI API 接口 模型温度如何设置？", nil, nil, time.Second*5)
+	result, err := client.Ask(context.Background(), "openAI API 接口 模型温度如何设置？", nil, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 }

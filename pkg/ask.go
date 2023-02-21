@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -26,7 +25,7 @@ type AskResult struct {
 	Data   *Message
 }
 
-func (client *ChatgptClient) Ask(ctx context.Context, prompt string, conversationId *string, parentId *string, timeout time.Duration) (*AskResult, error) {
+func (client *ChatgptClient) Ask(ctx context.Context, prompt string, conversationId *string, parentId *string) (*AskResult, error) {
 	url := fmt.Sprintf("%s/%s", client.baseURL, "api/conversation")
 	headers := http.Header{
 		"Accept": {"application/json; charset=utf-8"},

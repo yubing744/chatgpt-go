@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"github.com/Valgard/godotenv"
 	"github.com/yubing744/chatgpt-go/pkg"
@@ -41,7 +40,7 @@ You:There are currently no open positions
 You:Analyze the data and generate only one trading command: /open_long_position, /open_short_position, /close_position or /no_action, the entity will execute the command and give you feedback.
 AI:`
 	fmt.Printf("%s", prompt)
-	result, err := client.Ask(context.Background(), prompt, nil, nil, time.Second*5)
+	result, err := client.Ask(context.Background(), prompt, nil, nil)
 	if err != nil {
 		fmt.Printf("Ask fail: %s\n", err.Error())
 		return
