@@ -13,5 +13,5 @@ int-test: deps
 
 test: unit-test int-test
 
-run-%: unit-test
-	godotenv -f .env.local go run ./examples/$*/cmd.go
+run-%:
+	go run ./examples/$*/cmd.go

@@ -135,10 +135,6 @@ func (client *ChatgptClient) parseResponse(response *http.Response) ([]*Message,
 			break
 		}
 
-		line = strings.ReplaceAll(line, `\"`, `"`)
-		line = strings.ReplaceAll(line, `\'`, `'`)
-		line = strings.ReplaceAll(line, `\\`, `\`)
-
 		var parsedLine map[string]interface{}
 		err := json.Unmarshal([]byte(line), &parsedLine)
 		if err != nil {
