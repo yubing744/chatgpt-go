@@ -1,4 +1,4 @@
-.PHONY: deps clean build test run
+.PHONY: deps clean build *test run
 
 NAME="chatgpt"
 
@@ -8,8 +8,11 @@ deps:
 clean:
 	rm -rf bin/*
 
-test: deps
-	godotenv -f .env.local go test ./...
+unit-test: deps
+	godotenv -f .env.local go test ./pkg/...
+
+int-test: deps
+	godotenv -f .env.local go test ./test/...
 
 run-%: deps
 	godotenv -f .env.local go run ./examples/$*/cmd.go

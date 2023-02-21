@@ -123,7 +123,7 @@ func (client *ChatgptClient) parseResponse(response *http.Response) ([]*Message,
 			}
 			err := json.Unmarshal([]byte(line), &data)
 			if err != nil {
-				return nil, err
+				return nil, errors.New(line)
 			}
 
 			return nil, errors.New(data.Detail)
@@ -141,7 +141,7 @@ func (client *ChatgptClient) parseResponse(response *http.Response) ([]*Message,
 		var parsedLine map[string]interface{}
 		err := json.Unmarshal([]byte(line), &parsedLine)
 		if err != nil {
-			fmt.Printf("Error in Unmarshal: %s", line)
+			fmt.Printf("Error in Unmarshal: %s\n", line)
 			continue
 		}
 

@@ -1,8 +1,9 @@
 package pkg
 
 import (
-	"context"
-	"os"
+	"bytes"
+	"io/ioutil"
+	"net/http"
 	"testing"
 	"time"
 
@@ -10,52 +11,102 @@ import (
 	"github.com/yubing744/chatgpt-go/pkg/config"
 )
 
-func TestChatgptClientAsk(t *testing.T) {
-	email := os.Getenv("CHATGPT_EMAIL")
-	password := os.Getenv("CHATGPT_PASSWORD")
-	assert.NotEmpty(t, email)
-	assert.NotEmpty(t, password)
-
+func TestParseResponse(t *testing.T) {
 	cfg := &config.Config{
-		Email:    email,
-		Password: password,
-		Proxy:    "",
-		Debug:    true,
-	}
-	client := NewChatgptClient(cfg)
-	assert.NotNil(t, client)
-
-	err := client.Start(context.Background())
-	defer client.Stop()
-
-	assert.NoError(t, err)
-
-	result, err := client.Ask(context.Background(), "Hello", nil, nil, time.Second*5)
-	assert.NoError(t, err)
-	assert.NotNil(t, result)
-}
-
-func TestChatgptClientAsk2(t *testing.T) {
-	email := os.Getenv("CHATGPT_EMAIL")
-	password := os.Getenv("CHATGPT_PASSWORD")
-	assert.NotEmpty(t, email)
-	assert.NotEmpty(t, password)
-
-	cfg := &config.Config{
-		Email:    email,
-		Password: password,
+		Email:    "email",
+		Password: "password",
 		Proxy:    "",
 		Timeout:  time.Second * 30,
 		Debug:    true,
 	}
 	client := NewChatgptClient(cfg)
-	assert.NotNil(t, client)
 
-	err := client.Start(context.Background())
-	defer client.Stop()
-	assert.NoError(t, err)
+	body := ``
+	resp := &http.Response{
+		Body: ioutil.NopCloser(bytes.NewReader([]byte(body))),
+	}
 
-	result, err := client.Ask(context.Background(), "openAI API 接口 模型温度如何设置？", nil, nil, time.Second*5)
+	msgs, err := client.parseResponse(resp)
 	assert.NoError(t, err)
-	assert.NotNil(t, result)
+	assert.NotNil(t, msgs)
+}
+
+func TestParseResponseForUnmarshalError(t *testing.T) {
+	cfg := &config.Config{
+		Email:    "email",
+		Password: "password",
+		Proxy:    "",
+		Timeout:  time.Second * 30,
+		Debug:    true,
+	}
+	client := NewChatgptClient(cfg)
+
+	body := `data: 2023-02-21 07:00:21.653311`
+	resp := &http.Response{
+		Body: ioutil.NopCloser(bytes.NewReader([]byte(body))),
+	}
+
+	msgs, err := client.parseResponse(resp)
+	assert.NoError(t, err)
+	assert.NotNil(t, msgs)
+}
+
+func TestParseResponseForDetail(t *testing.T) {
+	cfg := &config.Config{
+		Email:    "email",
+		Password: "password",
+		Proxy:    "",
+		Timeout:  time.Second * 30,
+		Debug:    true,
+	}
+	client := NewChatgptClient(cfg)
+
+	body := `{"detail":"Too many requests in 1 hour. Try again later."}`
+	resp := &http.Response{
+		Body: ioutil.NopCloser(bytes.NewReader([]byte(body))),
+	}
+
+	_, err := client.parseResponse(resp)
+	assert.Error(t, err)
+	assert.Equal(t, "Too many requests in 1 hour. Try again later.", err.Error())
+}
+
+func TestParseResponseForServerError(t *testing.T) {
+	cfg := &config.Config{
+		Email:    "email",
+		Password: "password",
+		Proxy:    "",
+		Timeout:  time.Second * 30,
+		Debug:    true,
+	}
+	client := NewChatgptClient(cfg)
+
+	body := `{"detail":{"message":"The server had an error while processing your request. Sorry about that! You can retry your request, or contact us through our help center at help.openai.com if the error persists. (Please include the request ID 985e0eeb2c44145e93637d2d79d416cf in your message.)","type":"server_error","param":null,"code":null}}`
+	resp := &http.Response{
+		Body: ioutil.NopCloser(bytes.NewReader([]byte(body))),
+	}
+
+	_, err := client.parseResponse(resp)
+	assert.Error(t, err)
+	assert.Equal(t, `{"detail":{"message":"The server had an error while processing your request. Sorry about that! You can retry your request, or contact us through our help center at help.openai.com if the error persists. (Please include the request ID 985e0eeb2c44145e93637d2d79d416cf in your message.)","type":"server_error","param":null,"code":null}}`, err.Error())
+}
+
+func TestParseResponseForInternalServerError(t *testing.T) {
+	cfg := &config.Config{
+		Email:    "email",
+		Password: "password",
+		Proxy:    "",
+		Timeout:  time.Second * 30,
+		Debug:    true,
+	}
+	client := NewChatgptClient(cfg)
+
+	body := `Internal Server Error`
+	resp := &http.Response{
+		Body: ioutil.NopCloser(bytes.NewReader([]byte(body))),
+	}
+
+	_, err := client.parseResponse(resp)
+	assert.Error(t, err)
+	assert.Equal(t, "Internal Server Error", err.Error())
 }
