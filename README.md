@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"github.com/Valgard/godotenv"
 	"github.com/yubing744/chatgpt-go/pkg"
@@ -56,7 +55,7 @@ func main() {
 
 	prompt := "Hello"
 	fmt.Printf("You: %s", prompt)
-	result, err := client.Ask(context.Background(), prompt, nil, nil, time.Second*5)
+	result, err := client.Ask(context.Background(), prompt, nil, nil)
 	if err != nil {
 		fmt.Printf("Ask fail: %s\n", err.Error())
 		return
